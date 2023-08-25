@@ -1,12 +1,18 @@
 version: '3.8'
 services:
-  db:
+  postgres:
     image: postgres:15.3-alpine
     restart: always
     volumes:
-      - db_data:/var/lib/postgresql/data/
+      - postgres_data:/var/lib/postgresql/data/
     env_file:
       - .env
+
+  redis:
+    image: redis:7.2-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
 
   backend:
     build: ../backend
@@ -15,7 +21,7 @@ services:
       - static_volume:/app/static/
       - media_volume:/app/media/
     depends_on:
-      - db
+      - postgres
     env_file:
       - .env
 
@@ -32,6 +38,7 @@ services:
       - backend
 
 volumes:
-  db_data:
+  postgres_data:
+  redis_data:
   static_volume:
   media_volume:
