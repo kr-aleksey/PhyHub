@@ -14,6 +14,16 @@ services:
     volumes:
       - redis_data:/data
 
+  celery:
+    build: ../backend
+    command: celery -A PhyHub worker -B
+#    volumes:
+#      - ./project:/usr/src/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
   backend:
     build: ../backend
     restart: always
