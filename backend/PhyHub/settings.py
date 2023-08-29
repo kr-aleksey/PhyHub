@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-6=u!9sxuaht7_bw%-xe)bj!x-o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS_', '').split(' ')
 
 
 # Application definition
@@ -141,3 +141,6 @@ CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379')
 
 CELERY_TASK_TIME_LIMIT = 60
+
+# Sensors settings
+SENSOR_TIMEOUT = 0.2    # http timeout in sec

@@ -2,7 +2,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15.3-alpine
-    restart: always
+    restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     env_file:
@@ -10,14 +10,14 @@ services:
 
   redis:
     image: redis:7.2-alpine
-    restart: always
+    restart: unless-stopped
     volumes:
       - redis_data:/data
 
   celery-worker:
     build: ../backend
     command: celery -A PhyHub worker -l info
-    restart: always
+    restart: unless-stopped
     volumes:
       - ../backend:/usr/src/app
     env_file:
@@ -28,7 +28,7 @@ services:
   celery-beat:
     build: ../backend
     command: celery -A PhyHub beat -l info
-    restart: always
+    restart: unless-stopped
     volumes:
       - ../backend/:/usr/src/app/
     env_file:
@@ -38,7 +38,7 @@ services:
 
   backend:
     build: ../backend
-    restart: always
+    restart: unless-stopped
     volumes:
       - static_volume:/app/static/
       - media_volume:/app/media/
@@ -49,7 +49,7 @@ services:
 
   nginx:
     image: nginx:1.25.1
-    restart: always
+    restart: unless-stopped
     ports:
       - "80:80"
     volumes:
