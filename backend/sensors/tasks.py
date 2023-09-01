@@ -1,15 +1,32 @@
 from celery import shared_task
 
 from PhyHub.celery import app
+from .exeptions import SensorError
+from .models import SensorEndpoint
+from .services import SensorReadingsService
 
 
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
-    sender.add_periodic_task(10.0,
-                             periodic_task.s(),
-                             name='Add sensor reading')
+    """
+    Создаем периодические задачи для каждого endpoint-а.
+    """
+    endpoints = SensorEndpoint.objects.prefetch_related('sensors').all()
+    for endpoint in endpoints:
+        sender.add_periodic_task(
+            endpoint.periodicity,
+            get_sensor_readings_task.s(endpoint_id=endpoint.pk)
+        )
 
 
-@app.task
-def periodic_task():
-    print('Периодическая задача выполнена')
+@shared_task()
+def get_sensor_readings_task(endpoint_id: int):
+    """
+    Получает показания все сенсоров endpoint-а, сохраняет в БД.
+    :param endpoint_id: SensorEndpoint.pk
+    """
+    try:
+        service = SensorReadingsService(endpoint_id)
+        service.create_readings()
+    except SensorError:
+        return
