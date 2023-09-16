@@ -15,18 +15,17 @@ def setup_periodic_tasks(sender, **kwargs):
     for endpoint in endpoints:
         sender.add_periodic_task(
             endpoint.periodicity,
-            get_sensor_readings_task.s(endpoint_id=endpoint.pk)
+            create_sensor_readings_task.s(endpoint_id=endpoint.pk)
         )
 
 
 @shared_task()
-def get_sensor_readings_task(endpoint_id: int):
+def create_sensor_readings_task(endpoint_id: int):
     """
-    Получает показания все сенсоров endpoint-а, сохраняет в БД.
+    Получает показания всех сенсоров endpoint-а, сохраняет в БД.
     :param endpoint_id: SensorEndpoint.pk
     """
     try:
-        service = SensorReadingsService(endpoint_id)
-        service.create_readings()
+        return SensorReadingsService(endpoint_id).update_readings()
     except SensorError:
         return

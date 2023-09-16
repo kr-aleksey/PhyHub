@@ -12,6 +12,7 @@ class SensorAdmin(admin.ModelAdmin):
               'endpoint',
               'parameter',
               'type',
+              'max_counter_value',
               'is_enabled',
               'description')
     save_as = True
@@ -27,8 +28,9 @@ class SensorEndpointAdmin(admin.ModelAdmin):
 
 @admin.register(SensorReading)
 class SensorReadingAdmin(admin.ModelAdmin):
-    list_display = ('date', 'sensor', 'value')
+    list_display = ('measured_at', 'sensor', 'scalar_value', 'counter_value')
     list_filter = ('sensor',)
-    date_hierarchy = 'date'
-    fields = ('date', 'sensor', 'value')
-    readonly_fields = ('date', 'sensor')
+    date_hierarchy = 'measured_at'
+    fields = ('measured_at', 'sensor', 'scalar_value', 'counter_value')
+    # readonly_fields = ('measured_at', 'sensor')
+    save_as = True
