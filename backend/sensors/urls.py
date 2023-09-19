@@ -5,5 +5,5 @@ from . import views
 app_name = 'sensors'
 
 urlpatterns = [
-    path('test/', views.test_view)
+    path('readings/', views.SensorReadingView.as_view(), name='readings')
 ]

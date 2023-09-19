@@ -1,16 +1,21 @@
-from django.http import HttpResponse
-from django.shortcuts import render
+from django.db.models import BooleanField, F, Max, Min, Value
+from django.db.models.functions import Cast, Greatest
+from django_filters.views import FilterView
 
-from sensors.models import SensorEndpoint
+from .filters import SensorReadingFilterSet
+from .models import SensorReading
 
 
-def test_view(request):
-    endpoints = SensorEndpoint.objects.prefetch_related('sensors').all()
-    for endpoint in endpoints:
-        endpoint.update_sensor_readings(
-            sensor_values={"s11": {"count": 10},
-                           "s10": {"count": 3485211},
-                           "s21": {"count": 59003},
-                           "s20": {"count": 2670196}}
-        )
-    return HttpResponse('test')
+class SensorReadingView(FilterView):
+    model = SensorReading
+    filterset_class = SensorReadingFilterSet
+    template_name = 'sensors/sensor_readings.html'
+
+    def get_queryset(self):
+        qs = (self
+              .model
+              .objects
+              .order_by('measured_at'))
+
+        print(qs.query)
+        return qs

@@ -26,6 +26,6 @@ def create_sensor_readings_task(endpoint_id: int):
     :param endpoint_id: SensorEndpoint.pk
     """
     try:
-        return SensorReadingsService(endpoint_id).update_readings()
+        SensorReadingsService(endpoint_id).update_readings()
     except SensorError:
-        return
+        pass

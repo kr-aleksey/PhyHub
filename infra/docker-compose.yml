@@ -7,57 +7,59 @@ services:
       - postgres_data:/var/lib/postgresql/data/
     env_file:
       - .env
-
-  redis:
-    image: redis:7.2-alpine
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-
-  celery-worker:
-    build: ../backend
-    command: celery -A PhyHub worker -l info
-    restart: unless-stopped
-    volumes:
-      - ../backend:/usr/src/app
-    env_file:
-      - .env
-    depends_on:
-      - redis
-
-  celery-beat:
-    build: ../backend
-    command: celery -A PhyHub beat -l info
-    restart: unless-stopped
-    volumes:
-      - ../backend/:/usr/src/app/
-    env_file:
-      - .env
-    depends_on:
-      - redis
-
-  backend:
-    build: ../backend
-    restart: unless-stopped
-    volumes:
-      - static_volume:/app/static/
-      - media_volume:/app/media/
-    depends_on:
-      - postgres
-    env_file:
-      - .env
-
-  nginx:
-    image: nginx:1.25.1
-    restart: unless-stopped
     ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - static_volume:/var/html/static/
-      - media_volume:/var/html/media/
-    depends_on:
-      - backend
+      - "54321:5432"
+
+#  redis:
+#    image: redis:7.2-alpine
+#    restart: unless-stopped
+#    volumes:
+#      - redis_data:/data
+
+#  celery-worker:
+#    build: ../backend
+#    command: celery -A PhyHub worker -l info
+#    restart: unless-stopped
+#    volumes:
+#      - ../backend:/usr/src/app
+#    env_file:
+#      - .env
+#    depends_on:
+#      - redis
+
+#  celery-beat:
+#    build: ../backend
+#    command: celery -A PhyHub beat -l info
+#    restart: unless-stopped
+#    volumes:
+#      - ../backend/:/usr/src/app/
+#    env_file:
+#      - .env
+#    depends_on:
+#      - redis
+
+#  backend:
+#    build: ../backend
+#    restart: unless-stopped
+#    volumes:
+#      - static_volume:/app/static/
+#      - media_volume:/app/media/
+#    depends_on:
+#      - postgres
+#    env_file:
+#      - .env
+
+#  nginx:
+#    image: nginx:1.25.1
+#    restart: unless-stopped
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+#      - static_volume:/var/html/static/
+#      - media_volume:/var/html/media/
+#    depends_on:
+#      - backend
 
 volumes:
   postgres_data:
