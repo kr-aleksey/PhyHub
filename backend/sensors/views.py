@@ -1,21 +1,32 @@
-from django.db.models import BooleanField, F, Max, Min, Value
-from django.db.models.functions import Cast, Greatest
-from django_filters.views import FilterView
+from django.db.models import BooleanField, Value
+from django.views.generic import DetailView
 
-from .filters import SensorReadingFilterSet
-from .models import SensorReading
+from .filters import SensorReadingFilter
+from .models import Sensor
 
 
-class SensorReadingView(FilterView):
-    model = SensorReading
-    filterset_class = SensorReadingFilterSet
+class SensorReadingView(DetailView):
+    model = Sensor
+    context_object_name = 'sensor'
     template_name = 'sensors/sensor_readings.html'
+    filterset_class = SensorReadingFilter
 
-    def get_queryset(self):
-        qs = (self
-              .model
-              .objects
-              .order_by('measured_at'))
+    @staticmethod
+    def qs_to_chart_data(readings):
+        data = (
+            f'[new Date({int(r.measured_at.timestamp()) * 1000}), {r.value}]'
+            for r in readings
+        )
+        s = ', '.join(data)
+        return f'[{s}]'
 
-        print(qs.query)
-        return qs
+    def get_context_data(self, **kwargs):
+        data = super().get_context_data(**kwargs)
+        readings_filter = self.filterset_class(
+            self.request.GET,
+            queryset=self.object.readings.order_by('measured_at')
+        )
+
+        data['readings_filter'] = readings_filter
+        data['chart_data'] = self.qs_to_chart_data(readings_filter.qs)
+        return data

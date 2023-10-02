@@ -5,14 +5,12 @@ from django_filters.widgets import RangeWidget
 from .models import SensorReading
 
 
-class SensorReadingFilterSet(FilterSet):
-    date = DateTimeFromToRangeFilter(
+class SensorReadingFilter(FilterSet):
+    date_range = DateTimeFromToRangeFilter(
         field_name='measured_at',
-        widget=RangeWidget(attrs={'type': 'datetime-local'}))
+        widget=RangeWidget(attrs={'type': 'datetime-local'})
+    )
 
     class Meta:
         model = SensorReading
-        fields = ['sensor', 'date']
-        # fields = {
-        #     'measured_at': ['gte', 'lte'],
-        # }
+        fields = ['date_range']

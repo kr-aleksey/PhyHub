@@ -1,132 +1,46 @@
 from datetime import datetime
-from typing import Any, Optional
 
-from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import OuterRef, Q
-
-
-class SensorEndpoint(models.Model):
-    name = models.CharField('Наименование',
-                            max_length=25,
-                            unique=True)
-    url = models.URLField('url')
-    periodicity = models.PositiveIntegerField(
-        'Периодичность опроса, сек.',
-        validators=[MinValueValidator(1)]
-    )
-    is_enabled = models.BooleanField('Включен',
-                                     default=False)
-    description = models.CharField('Описание',
-                                   blank=True)
-
-    class Meta:
-        verbose_name = 'Endpoint'
-        verbose_name_plural = 'Endpoints'
-        ordering = ['name']
-
-    def __str__(self):
-        return self.name
-
-    def update_sensor_readings(self,
-                               sensor_values: dict[str, dict[str, Any]]
-                               ) -> list:
-        if not self.is_enabled:
-            return []
-        sensors = self.sensors.filter(is_enabled=True)
-        # Получаем предыдущие показания для счетчиков
-        counter_ids = [s.pk for s in sensors if s.type == s.COUNTER]
-        latest_counter_values = {}
-        if len(counter_ids) > 0:
-            for reading in (SensorReading
-                            .objects
-                            .filter_latest(sensor_id__in=counter_ids)):
-                latest_counter_values[reading.sensor_id] = reading.counter_value
-        # Подготавливаем список новых измерений
-        new_readings = []
-        for sensor in sensors:
-            # Получаем новое показание датчика
-            try:
-                sensor_value = sensor_values[sensor.name][sensor.parameter]
-            except (KeyError, TypeError):
-                continue
-            # Рассчитываем значения
-            if sensor.type == Sensor.COUNTER:
-                counter_value = sensor_value
-                scalar_value = sensor.get_counter_diff(
-                    latest_counter_values.get(sensor.pk),
-                    counter_value
-                )
-            else:
-                counter_value = None
-                scalar_value = sensor_value
-
-            new_readings.append(
-                SensorReading(sensor=sensor,
-                              scalar_value=scalar_value,
-                              counter_value=counter_value)
-            )
-        if len(new_readings) > 0:
-            return SensorReading.objects.bulk_create(new_readings)
-        return []
+from django.db.models import OuterRef
+from django.utils import timezone
 
 
 class Sensor(models.Model):
-    SCALAR = 'scl'
-    COUNTER = 'cnt'
-    TYPES = (
-        (SCALAR, 'Абсолютное значение'),
-        (COUNTER, 'Накопительное значение'),
-    )
-    endpoint = models.ForeignKey(SensorEndpoint,
-                                 on_delete=models.CASCADE,
-                                 related_name='sensors',
-                                 verbose_name='Endpoint')
-    name = models.CharField('Имя',
-                            max_length=25,
-                            unique=True)
-    parameter = models.CharField('Параметр',
-                                 max_length=20)
-    type = models.CharField('Тип параметра',
-                            choices=TYPES,
-                            max_length=3)
-    max_counter_value = models.PositiveIntegerField('Предел счета',
-                                                    blank=True,
-                                                    null=True)
+    verbose_name = models.CharField('Полное наименование',
+                                    max_length=50)
+    name = models.SlugField('Наименование',
+                            unique=True,
+                            max_length=25)
     is_enabled = models.BooleanField('Включен',
                                      default=False)
     description = models.CharField('Описание',
+                                   max_length=100,
                                    blank=True)
+
+    # current_working_interval = models.ForeignKey(
+    #     on_delete=models.PROTECT,
+    #     blank=True,
+    #     null=True,
+    #     verbose_name='Текущий рабочий интервал'
+    # )
 
     class Meta:
         verbose_name = 'Сенсор'
         verbose_name_plural = 'Сенсоры'
-        ordering = ['name']
-        constraints = [
-            models.CheckConstraint(
-                check=(~Q(type='cnt')
-                       | (Q(type='cnt') & Q(max_counter_value__isnull=False))),
-                name='for_typ_counter_max_counter_value_is_not_null'
-            )
-        ]
+        ordering = ['verbose_name']
 
     def __str__(self):
-        return self.name
+        return self.verbose_name
 
-    def get_counter_diff(self,
-                         prev_counter_value: Optional[int],
-                         counter_value: int) -> int:
+    @staticmethod
+    def get_working_status(value: float) -> 'WorkingInterval.WorkingStatus':
         """
-        Возвращает разность значений счетчика с учетом возможного переполнения.
-        :param prev_counter_value: Предшествующее значение счетчика.
-        :param counter_value: Значение счетчика.
-        :return: Разность показаний.
+        :param value: Показание сенсора.
+        :return: Статус сенсора в зависимости от value.
         """
-        if self.type != self.COUNTER or prev_counter_value is None:
-            return 0
-        if prev_counter_value > counter_value:
-            return self.max_counter_value - prev_counter_value + counter_value
-        return counter_value - prev_counter_value
+        if value > 0:
+            return WorkingInterval.WorkingStatus.RUN
+        return WorkingInterval.WorkingStatus.IDLE
 
 
 class SensorReadingQuerySet(models.QuerySet):
@@ -144,12 +58,9 @@ class SensorReading(models.Model):
                                on_delete=models.CASCADE,
                                related_name='readings',
                                verbose_name='Сенсор')
-    scalar_value = models.IntegerField('Значение')
-    counter_value = models.IntegerField('Показание счетчика',
-                                        blank=True,
-                                        null=True)
+    value = models.FloatField('Значение')
     measured_at = models.DateTimeField('Дата и время измерения',
-                                       default=datetime.now)
+                                       default=timezone.now)
 
     objects = SensorReadingQuerySet().as_manager()
 
@@ -159,4 +70,75 @@ class SensorReading(models.Model):
         ordering = ['-measured_at']
 
     def __str__(self):
-        return str(self.scalar_value)
+        return str(self.value)
+
+
+class WorkingIntervalQueryset(models.QuerySet):
+
+    def check_interval(self,
+                       sensor: Sensor,
+                       status: 'WorkingInterval.WorkingStatus',
+                       on_date: datetime):
+        """
+        Запрашивает из БД текущий рабочий интервал, сравнивает его статус
+        с текущим. Если статусы совпадают, возвращает интервал
+        без изменений, иначе создает новы интервал с текущим статусом и
+        возвращает его.
+        :param on_date: Момент времени измерения.
+        :param sensor: Сенсор.
+        :param status: Текущий статус.
+        :return: Рабочий интервал.
+        """
+
+        prev_interval = (self
+                         .filter(sensor=sensor)
+                         .order_by('started_at')
+                         .last())
+        # если предыдущих интервалов нет создаем новый
+        if prev_interval is None:
+            return self.create(sensor=sensor,
+                               status=status.value,
+                               started_at=on_date)
+        # если статус не изменился или дата в прошлом, пропускаем
+        if (prev_interval.status == status.value
+                or prev_interval.started_at >= on_date):
+            return prev_interval
+        # иначе обновляем старый и создаем новый
+        new_interval = self.create(sensor=sensor,
+                                   status=status.value,
+                                   started_at=on_date)
+        prev_interval.finished_at = on_date
+        prev_interval.save()
+        return new_interval
+
+
+class WorkingInterval(models.Model):
+    class WorkingStatus(models.TextChoices):
+        IDLE = 'idl', 'Простой'
+        RUN = 'run', 'Работа'
+
+    sensor = models.ForeignKey(Sensor,
+                               on_delete=models.CASCADE,
+                               related_name='working_intervals',
+                               verbose_name='Сенсор')
+    status = models.CharField('Статус',
+                              max_length=3,
+                              choices=WorkingStatus.choices)
+    started_at = models.DateTimeField('С')
+    finished_at = models.DateTimeField('До',
+                                       blank=True,
+                                       null=True)
+
+    objects = WorkingIntervalQueryset.as_manager()
+
+    class Meta:
+        verbose_name = 'Рабочий интервал'
+        verbose_name_plural = 'Рабочие интервалы'
+
+    def __str__(self):
+        date_format = "%d.%m.%y %H:%M:%S"
+        started_at = self.started_at.strftime(date_format)
+        finished_at = (self.finished_at.strftime(date_format)
+                       if self.finished_at is not None
+                       else 'текущее время')
+        return f'{started_at} - {finished_at}'

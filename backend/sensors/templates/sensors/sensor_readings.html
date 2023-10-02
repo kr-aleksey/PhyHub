@@ -11,20 +11,17 @@
             data.addColumn('date', 'Time');
             data.addColumn('number', 'Value');
 
-            data.addRows([
-                {% for reading in filter.qs %}
-                    [new Date({{ reading.measured_at|date:'Y, m, d, H, i, s' }}), {{ reading.scalar_value }}],
-                    {#[new Date({{ reading.measured_at|date:'U' }} * 1000), {{ reading.scalar_value }}],#}
-                {% endfor %}
-            ]);
+            data.addRows({{ chart_data }});
+
 
             var options = {
+                explorer: {actions: ["dragToZoom", "rightClickToReset"]},
                 chart: {
                     title: 'Скорость машины',
                     subtitle: 'ед. в мин.'
                 },
                 width: 900,
-                height: 500
+                height: 500,
             };
 
             var chart = new google.charts.Line(document.getElementById('linechart_material'));
@@ -36,7 +33,7 @@
 {% block content %}
     <div>
         <form method="get">
-            {{ filter.form.as_p }}
+            {{ readings_filter.form.as_p }}
             <input type="submit">
         </form>
     </div>
