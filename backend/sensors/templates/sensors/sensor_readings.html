@@ -2,7 +2,9 @@
 {% block head %}
     {% include 'include/google_charts_loader.html' %}
     <script type="text/javascript">
-        google.charts.load('current', {'packages': ['line']});
+        google.charts.load('current', {'packages': ['line', 'timeline']});
+        {#google.charts.load("current", {'packages':['timeline']});#}
+        {#google.charts.load('current', {'packages':['timeline']});#}
         google.charts.setOnLoadCallback(drawChart);
 
         function drawChart() {
@@ -10,9 +12,14 @@
             let data = new google.visualization.DataTable();
             data.addColumn('date', 'Time');
             data.addColumn('number', 'Value');
-
             data.addRows({{ chart_data }});
-
+            {% autoescape off %}
+                let tl_data = new google.visualization.DataTable();
+                tl_data.addColumn({type: 'string', id: 'Status'});
+                tl_data.addColumn({type: 'date', id: 'Start'});
+                tl_data.addColumn({type: 'date', id: 'End'});
+                tl_data.addRows({{ timeline_data }});
+            {% endautoescape %}
 
             var options = {
                 explorer: {actions: ["dragToZoom", "rightClickToReset"]},
@@ -20,13 +27,15 @@
                     title: 'Скорость машины',
                     subtitle: 'ед. в мин.'
                 },
-                width: 900,
-                height: 500,
+
             };
 
             var chart = new google.charts.Line(document.getElementById('linechart_material'));
+            var tlchart = new google.visualization.Timeline(document.getElementById('time_line'));
+
 
             chart.draw(data, google.charts.Line.convertOptions(options));
+            tlchart.draw(tl_data);
         }
     </script>
 {% endblock head %}
@@ -37,5 +46,7 @@
             <input type="submit">
         </form>
     </div>
-    <div id="linechart_material" style="width: 900px; height: 500px"></div>
+    <div id="linechart_material" style="width: 1800px; height: 500px"></div>
+    <div id="time_line" style="width: 1700px; height: 500px"></div>
+
 {% endblock content %}
