@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
 
     'api.apps.ApiConfig',
+    'core.apps.CoreConfig',
     'sensors.apps.SensorsConfig',
     'users.apps.UsersConfig',
 ]

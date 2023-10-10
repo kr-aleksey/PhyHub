@@ -5,6 +5,11 @@ from django.db.models import OuterRef
 from django.utils import timezone
 
 
+class WorkingStatus(models.TextChoices):
+    IDLE = 'idl', 'Остановка'
+    RUN = 'run', 'Работа'
+
+
 class Sensor(models.Model):
     verbose_name = models.CharField('Полное наименование',
                                     max_length=50)
@@ -33,51 +38,21 @@ class Sensor(models.Model):
         return self.verbose_name
 
     @staticmethod
-    def get_working_status(value: float) -> 'WorkingInterval.WorkingStatus':
+    def get_working_status(value: float) -> WorkingStatus:
         """
         :param value: Показание сенсора.
         :return: Статус сенсора в зависимости от value.
         """
         if value > 0:
-            return WorkingInterval.WorkingStatus.RUN
-        return WorkingInterval.WorkingStatus.IDLE
-
-
-class SensorReadingQuerySet(models.QuerySet):
-
-    def filter_latest(self, **kwargs):
-        latest_reading = (self
-                          .filter(sensor=OuterRef('sensor'))
-                          .order_by('-measured_at')
-                          .values('pk')[:1])
-        return self.filter(pk=latest_reading, **kwargs)
-
-
-class SensorReading(models.Model):
-    sensor = models.ForeignKey(Sensor,
-                               on_delete=models.CASCADE,
-                               related_name='readings',
-                               verbose_name='Сенсор')
-    value = models.FloatField('Значение')
-    measured_at = models.DateTimeField('Дата и время измерения',
-                                       default=timezone.now)
-
-    objects = SensorReadingQuerySet().as_manager()
-
-    class Meta:
-        verbose_name = 'Показание сенсора'
-        verbose_name_plural = 'Показания сенсоров'
-        ordering = ['-measured_at']
-
-    def __str__(self):
-        return str(self.value)
+            return WorkingStatus.RUN
+        return WorkingStatus.IDLE
 
 
 class WorkingIntervalQueryset(models.QuerySet):
 
     def check_interval(self,
                        sensor: Sensor,
-                       status: 'WorkingInterval.WorkingStatus',
+                       status: WorkingStatus,
                        on_date: datetime):
         """
         Запрашивает из БД текущий рабочий интервал, сравнивает его статус
@@ -113,9 +88,6 @@ class WorkingIntervalQueryset(models.QuerySet):
 
 
 class WorkingInterval(models.Model):
-    class WorkingStatus(models.TextChoices):
-        IDLE = 'idl', 'Простой'
-        RUN = 'run', 'Работа'
 
     sensor = models.ForeignKey(Sensor,
                                on_delete=models.CASCADE,
@@ -142,3 +114,37 @@ class WorkingInterval(models.Model):
                        if self.finished_at is not None
                        else 'текущее время')
         return f'{started_at} - {finished_at}'
+
+
+class SensorReadingQuerySet(models.QuerySet):
+
+    def filter_latest(self, **kwargs):
+        latest_reading = (self
+                          .filter(sensor=OuterRef('sensor'))
+                          .order_by('-measured_at')
+                          .values('pk')[:1])
+        return self.filter(pk=latest_reading, **kwargs)
+
+
+class SensorReading(models.Model):
+    sensor = models.ForeignKey(Sensor,
+                               on_delete=models.CASCADE,
+                               related_name='readings',
+                               verbose_name='Сенсор')
+    value = models.FloatField('Значение')
+    measured_at = models.DateTimeField('Дата и время измерения',
+                                       default=timezone.now)
+    working_interval = models.ForeignKey(WorkingInterval,
+                                         on_delete=models.PROTECT,
+                                         related_name='readings',
+                                         verbose_name='Измерения')
+
+    objects = SensorReadingQuerySet().as_manager()
+
+    class Meta:
+        verbose_name = 'Измерение'
+        verbose_name_plural = 'Измерения'
+        ordering = ['-measured_at']
+
+    def __str__(self):
+        return str(self.value)

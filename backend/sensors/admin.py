@@ -20,7 +20,7 @@ class SensorReadingAdmin(admin.ModelAdmin):
     list_display = ('measured_at', 'sensor', 'value')
     list_filter = ('sensor',)
     date_hierarchy = 'measured_at'
-    fields = ('measured_at', 'sensor', 'value', 'counter_value')
+    fields = ('measured_at', 'sensor', 'value')
     # readonly_fields = ('measured_at', 'sensor')
     save_as = True
 

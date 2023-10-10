@@ -1,16 +1,19 @@
 from datetime import datetime
+from typing import Iterable
 
+from django.db.models import Avg, Count, FloatField, Q
+from django.db.models.functions import Cast, Greatest
 from django.views.generic import DetailView
 
-from .filters import SensorReadingFilter
-from .models import Sensor
+from .filters import WorkingIntervalFilter
+from .models import Sensor, SensorReading, WorkingInterval
 
 
 class SensorReadingView(DetailView):
     model = Sensor
     context_object_name = 'sensor'
-    template_name = 'sensors/sensor_readings_.html'
-    filterset_class = SensorReadingFilter
+    template_name = 'sensors/sensor_readings.html'
+    filterset_class = WorkingIntervalFilter
 
     @staticmethod
     def qs_to_chart_data(readings):
@@ -22,11 +25,16 @@ class SensorReadingView(DetailView):
         return f'[{s}]'
 
     @staticmethod
-    def qs_to_timeline_data(intervals):
+    def qs_to_timeline_data(intervals: Iterable[WorkingInterval]):
         data = (
-            (f"['{i.status}', "
+            (f"['{i.get_status_display()}', "
+             f"'{i.get_status_display()}', "
+             f"'{'#4285f4' if i.status == 'run' else '#db4437'}', "
              f"new Date({int(i.started_at.timestamp()) * 1000}), "
-             f"new Date({(int((i.finished_at or datetime.now()).timestamp()) * 1000)})]")
+             f"new Date("
+             f"{(int((i.finished_at or datetime.now()).timestamp()) * 1000)}"
+             f")]")
+
             for i in intervals
         )
         s = ', '.join(data)
@@ -34,20 +42,25 @@ class SensorReadingView(DetailView):
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
-        readings_filter = self.filterset_class(
+        interval_filter = self.filterset_class(
             self.request.GET,
-            queryset=self.object.readings.order_by('measured_at')
+            queryset=self.object.working_intervals.order_by('started_at')
         )
-
-        data['readings_filter'] = readings_filter
-        data['chart_data'] = self.qs_to_chart_data(readings_filter.qs)
-        f = readings_filter.qs[0]
-        l = readings_filter.qs[len(readings_filter.qs) - 1]
-        data['timeline_data'] = self.qs_to_timeline_data(
-            (self
-             .object
-             .working_intervals
-             .filter(finished_at__gt=f.measured_at, started_at__lte=l.measured_at))
+        working_intervals = interval_filter.qs
+        sensor_readings = SensorReading.objects.filter(
+            working_interval_id__in=(i.pk for i in working_intervals)
         )
-
+        speed = sensor_readings.aggregate(
+            avg_gt0=Avg('value', filter=Q(value__gt=0)),
+            avg=Avg('value'),
+            idle=(Cast(Count('value', filter=Q(value__gt=0)),
+                       output_field=FloatField())
+                  / Greatest(Count('value'), 1)
+                  * 100.0)
+        )
+        data['filter'] = interval_filter
+        data['chart_data'] = self.qs_to_chart_data(sensor_readings)
+        data['timeline_data'] = self.qs_to_timeline_data(working_intervals)
+        data['summary'] = speed
+        data['sensors'] = Sensor.objects.all()
         return data

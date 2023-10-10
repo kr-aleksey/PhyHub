@@ -8,8 +8,6 @@ from sensors.models import Sensor, SensorReading, WorkingInterval
 
 
 class SensorReadingSerializer(serializers.ModelSerializer):
-    # sensor = serializers.SlugRelatedField(slug_field='name',
-    #                                       queryset=Sensor.objects.all())
     sensor = serializers.SlugField()
 
     class Meta:
@@ -40,14 +38,16 @@ class SensorReadingListSerializer(serializers.ListSerializer):
             if sensor is None:
                 errors.append(f'Не найден сенсор {name}')
             elif sensor.is_enabled:
-                data['sensor'] = sensor
-                data['measured_at'] = measured_at
-                readings.append(SensorReading(**data))
-                WorkingInterval.objects.check_interval(
+                interval = WorkingInterval.objects.check_interval(
                     sensor=sensor,
                     status=sensor.get_working_status(data['value']),
                     on_date=measured_at
                 )
+                data['sensor'] = sensor
+                data['measured_at'] = measured_at
+                data['working_interval'] = interval
+                readings.append(SensorReading(**data))
+
         if errors:
             raise ValidationError(errors)
 
