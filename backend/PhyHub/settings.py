@@ -33,7 +33,7 @@ SECRET_KEY = os.getenv(
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(' ')
-CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
+# CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
 
 # Application definition
 
