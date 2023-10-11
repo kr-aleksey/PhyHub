@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  postgres:
+  db:
     image: postgres:15.3-alpine
     restart: unless-stopped
     volumes:
@@ -10,16 +10,16 @@ services:
     ports:
       - "54321:5432"
 
-  backend:
+  web:
     build: ../backend
     restart: unless-stopped
     volumes:
       - static_volume:/app/static/
       - media_volume:/app/media/
-    depends_on:
-      - postgres
     env_file:
       - .env
+    depends_on:
+      - db
 
   nginx:
     image: nginx:1.25.1
@@ -31,7 +31,7 @@ services:
       - static_volume:/var/html/static/
       - media_volume:/var/html/media/
     depends_on:
-      - backend
+      - web
 
 volumes:
   postgres_data:
