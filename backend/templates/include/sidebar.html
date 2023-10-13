@@ -18,7 +18,7 @@
                 {% for sensor in sensors %}
                     <li class="sidebar-item">
                         <a class="sidebar-link" href="{% url 'sensors:readings' pk=sensor.pk %}" aria-expanded="false">
-                            <span class="hide-menu">{{ sensor.verbose_name }}</span>
+                            <span class="hide-menu">{{ sensor.name }}</span>
                         </a>
                     </li>
                 {% endfor %}

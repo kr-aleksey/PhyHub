@@ -27,16 +27,16 @@ class SensorReadingListSerializer(serializers.ListSerializer):
         measured_at = timezone.now()
         sensors = (Sensor
                    .objects
-                   .filter(name__in={i['sensor'] for i in validated_data})
-                   .in_bulk(field_name='name'))
+                   .filter(slug__in={i['sensor'] for i in validated_data})
+                   .in_bulk(field_name='slug'))
 
         readings = []
         errors = []
         for data in validated_data:
-            name = data['sensor']
-            sensor: Sensor = sensors.get(name)
+            slug = data['sensor']
+            sensor: Sensor = sensors.get(slug)
             if sensor is None:
-                errors.append(f'Не найден сенсор {name}')
+                errors.append(f'Не найден сенсор {slug}')
             elif sensor.is_enabled:
                 interval = WorkingInterval.objects.check_interval(
                     sensor=sensor,
