@@ -6,6 +6,6 @@ app_name = 'sensors'
 
 urlpatterns = [
     path('<int:pk>/readings/',
-         views.SensorReadingView.as_view(),
+         views.SensorChartView.as_view(),
          name='readings')
 ]

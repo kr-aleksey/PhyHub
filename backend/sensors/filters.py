@@ -13,12 +13,10 @@ from .models import SensorReading
 class WorkingIntervalFilter(FilterSet):
 
     datetime_min = DateTimeFilter(
-        # method='datetime_filter',
         widget=TextInput(attrs={'type': 'datetime-local'}),
         label='С'
     )
     datetime_max = DateTimeFilter(
-        # method='datetime_filter',
         widget=TextInput(attrs={'type': 'datetime-local'}),
         label='По'
     )
@@ -36,17 +34,16 @@ class WorkingIntervalFilter(FilterSet):
         queryset = queryset.filter(
             Q(started_at__gte=datetime_min)
             | (Q(started_at__lt=datetime_min)
-               & Q(finished_at__gte=datetime_min))
-            | (Q(started_at__lt=datetime_min)
-               & Q(finished_at__isnull=True))
+               & (Q(finished_at__gte=datetime_min)
+                  | Q(finished_at__isnull=True)))
+
         )
         # фильтруем по конечной дате
         return queryset.filter(
             Q(finished_at__lte=datetime_max)
             | (Q(finished_at__gt=datetime_max)
-               & Q(started_at__lte=datetime_max))
-            | (Q(started_at__lt=datetime_max)
-               & Q(started_at__isnull=True))
+               & (Q(started_at__lte=datetime_max)
+                  | Q(finished_at__isnull=True)))
         )
 
     @property

@@ -11,9 +11,9 @@ class WorkingStatus(models.TextChoices):
 
 
 class Sensor(models.Model):
-    verbose_name = models.CharField('Полное наименование',
-                                    max_length=50)
-    name = models.SlugField('Наименование',
+    name = models.CharField('Полное наименование',
+                            max_length=50)
+    slug = models.SlugField('Slug',
                             unique=True,
                             max_length=25)
     is_enabled = models.BooleanField('Включен',
@@ -22,20 +22,13 @@ class Sensor(models.Model):
                                    max_length=100,
                                    blank=True)
 
-    # current_working_interval = models.ForeignKey(
-    #     on_delete=models.PROTECT,
-    #     blank=True,
-    #     null=True,
-    #     verbose_name='Текущий рабочий интервал'
-    # )
-
     class Meta:
         verbose_name = 'Сенсор'
         verbose_name_plural = 'Сенсоры'
-        ordering = ['verbose_name']
+        ordering = ['name']
 
     def __str__(self):
-        return self.verbose_name
+        return self.name
 
     @staticmethod
     def get_working_status(value: float) -> WorkingStatus:
@@ -88,7 +81,6 @@ class WorkingIntervalQueryset(models.QuerySet):
 
 
 class WorkingInterval(models.Model):
-
     sensor = models.ForeignKey(Sensor,
                                on_delete=models.CASCADE,
                                related_name='working_intervals',
@@ -106,6 +98,7 @@ class WorkingInterval(models.Model):
     class Meta:
         verbose_name = 'Рабочий интервал'
         verbose_name_plural = 'Рабочие интервалы'
+        ordering = ['started_at']
 
     def __str__(self):
         date_format = "%d.%m.%y %H:%M:%S"
@@ -144,7 +137,7 @@ class SensorReading(models.Model):
     class Meta:
         verbose_name = 'Измерение'
         verbose_name_plural = 'Измерения'
-        ordering = ['-measured_at']
+        ordering = ['measured_at']
 
     def __str__(self):
         return str(self.value)

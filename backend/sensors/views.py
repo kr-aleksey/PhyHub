@@ -9,7 +9,7 @@ from .filters import WorkingIntervalFilter
 from .models import Sensor, SensorReading, WorkingInterval
 
 
-class SensorReadingView(DetailView):
+class SensorChartView(DetailView):
     model = Sensor
     context_object_name = 'sensor'
     template_name = 'sensors/sensor_readings.html'
