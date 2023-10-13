@@ -135,7 +135,7 @@ class SensorReading(models.Model):
     measured_at = models.DateTimeField('Дата и время измерения',
                                        default=timezone.now)
     working_interval = models.ForeignKey(WorkingInterval,
-                                         on_delete=models.PROTECT,
+                                         on_delete=models.CASCADE,
                                          related_name='readings',
                                          verbose_name='Измерения')
 
