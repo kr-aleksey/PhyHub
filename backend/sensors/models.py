@@ -11,6 +11,9 @@ class WorkingStatus(models.TextChoices):
 
 
 class Sensor(models.Model):
+    """
+    Сенсор физической величины.
+    """
     name = models.CharField('Полное наименование',
                             max_length=50)
     slug = models.SlugField('Slug',
@@ -81,6 +84,9 @@ class WorkingIntervalQueryset(models.QuerySet):
 
 
 class WorkingInterval(models.Model):
+    """
+    Временной интервал, группирующий показания сенсора.
+    """
     sensor = models.ForeignKey(Sensor,
                                on_delete=models.CASCADE,
                                related_name='working_intervals',
@@ -92,6 +98,9 @@ class WorkingInterval(models.Model):
     finished_at = models.DateTimeField('До',
                                        blank=True,
                                        null=True)
+    # comment = models.CharField('Комментарий',
+    #                            max_length=200,
+    #                            blank=True)
 
     objects = WorkingIntervalQueryset.as_manager()
 
@@ -120,6 +129,9 @@ class SensorReadingQuerySet(models.QuerySet):
 
 
 class SensorReading(models.Model):
+    """
+    Показание сенсора.
+    """
     sensor = models.ForeignKey(Sensor,
                                on_delete=models.CASCADE,
                                related_name='readings',
