@@ -26,17 +26,23 @@ class SensorChartView(DetailView):
 
     @staticmethod
     def qs_to_timeline_data(intervals: Iterable[WorkingInterval]):
-        data = (
-            (f"['{i.status.name}', "
-             f"'{i.status.name}', "
-             f"'{i.status.color}', "
-             f"new Date({int(i.started_at.timestamp()) * 1000}), "
-             f"new Date("
-             f"{(int((i.finished_at or datetime.now()).timestamp()) * 1000)}"
-             f")]")
-
-            for i in intervals
-        )
+        data = []
+        for interval in intervals:
+            if interval.status is None:
+                name = 'NA'
+                color = '#000000'
+            else:
+                name = interval.status.name
+                color = interval.status.color
+            data.append(
+                f"['{name}', "
+                f"'{name}', "
+                f"'{color}', "
+                f"new Date({int(interval.started_at.timestamp()) * 1000}), "
+                f"new Date("
+                f"{(int((interval.finished_at or datetime.now()).timestamp()) * 1000)}"
+                f")]"
+            )
         s = ', '.join(data)
         return f'[{s}]'
 
