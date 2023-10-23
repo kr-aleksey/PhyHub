@@ -1,13 +1,9 @@
 from datetime import datetime
+from typing import Optional
 
 from django.db import models
 from django.db.models import OuterRef
 from django.utils import timezone
-
-
-class WorkingStatus(models.TextChoices):
-    IDLE = 'idl', 'Остановка'
-    RUN = 'run', 'Работа'
 
 
 class Sensor(models.Model):
@@ -33,27 +29,53 @@ class Sensor(models.Model):
     def __str__(self):
         return self.name
 
-    @staticmethod
-    def get_working_status(value: float) -> WorkingStatus:
+    def get_working_status(self, value: float) -> Optional['SensorStatus']:
         """
         :param value: Показание сенсора.
         :return: Статус сенсора в зависимости от value.
         """
-        if value > 0:
-            return WorkingStatus.RUN
-        return WorkingStatus.IDLE
+        return (self
+                .statuses
+                .filter(start_value_range__lte=value,
+                        stop_value_range__gt=value)
+                .order_by('start_value_range')
+                .last())
+
+
+class SensorStatus(models.Model):
+    """
+    Статус (состояние) сенсора.
+    """
+    name = models.CharField('Название')
+    start_value_range = models.FloatField('Значение с')
+    stop_value_range = models.FloatField('Значение до')
+    need_comment = models.BooleanField('Необходим комментарий оператора')
+    color = models.CharField('Цвет',
+                             max_length=7,
+                             help_text='html цвет, например #4285f4')
+    sensor = models.ForeignKey(Sensor,
+                               related_name='statuses',
+                               on_delete=models.CASCADE,
+                               verbose_name='Сенсор')
+
+    class Meta:
+        verbose_name = 'Состояние сенсора'
+        verbose_name_plural = 'Состояния сенсоров'
+
+    def __str__(self):
+        return self.name
 
 
 class WorkingIntervalQueryset(models.QuerySet):
 
     def check_interval(self,
                        sensor: Sensor,
-                       status: WorkingStatus,
+                       status: Optional[SensorStatus],
                        on_date: datetime):
         """
         Запрашивает из БД текущий рабочий интервал, сравнивает его статус
         с текущим. Если статусы совпадают, возвращает интервал
-        без изменений, иначе создает новы интервал с текущим статусом и
+        без изменений, иначе создает новый интервал с текущим статусом и
         возвращает его.
         :param on_date: Момент времени измерения.
         :param sensor: Сенсор.
@@ -61,22 +83,25 @@ class WorkingIntervalQueryset(models.QuerySet):
         :return: Рабочий интервал.
         """
 
-        prev_interval = (self
-                         .filter(sensor=sensor)
-                         .order_by('started_at')
-                         .last())
-        # если предыдущих интервалов нет создаем новый
+        prev_interval: WorkingInterval = (self
+                                          .filter(sensor=sensor)
+                                          .order_by('started_at')
+                                          .last())
+        # если предыдущих интервалов нет, создаем новый
         if prev_interval is None:
             return self.create(sensor=sensor,
-                               status=status.value,
+                               status=status,
                                started_at=on_date)
-        # если статус не изменился или дата в прошлом, пропускаем
-        if (prev_interval.status == status.value
-                or prev_interval.started_at >= on_date):
+        # если статус не изменился или дата в прошлом, возвращаем предыдущий
+        if status is None:
+            if prev_interval.status is None:
+                return prev_interval
+        elif (prev_interval.status_id == status.pk
+              or prev_interval.started_at >= on_date):
             return prev_interval
-        # иначе обновляем старый и создаем новый
+        # иначе обновляем предыдущий и создаем новый
         new_interval = self.create(sensor=sensor,
-                                   status=status.value,
+                                   status=status,
                                    started_at=on_date)
         prev_interval.finished_at = on_date
         prev_interval.save()
@@ -87,20 +112,23 @@ class WorkingInterval(models.Model):
     """
     Временной интервал, группирующий показания сенсора.
     """
-    sensor = models.ForeignKey(Sensor,
-                               on_delete=models.CASCADE,
-                               related_name='working_intervals',
-                               verbose_name='Сенсор')
-    status = models.CharField('Статус',
-                              max_length=3,
-                              choices=WorkingStatus.choices)
+
     started_at = models.DateTimeField('С')
     finished_at = models.DateTimeField('До',
                                        blank=True,
                                        null=True)
-    # comment = models.CharField('Комментарий',
-    #                            max_length=200,
-    #                            blank=True)
+    comment = models.CharField('Комментарий',
+                               max_length=200,
+                               blank=True)
+    sensor = models.ForeignKey(Sensor,
+                               on_delete=models.CASCADE,
+                               related_name='working_intervals',
+                               verbose_name='Сенсор')
+    status = models.ForeignKey(SensorStatus,
+                               on_delete=models.SET_NULL,
+                               blank=True,
+                               null=True,
+                               verbose_name='Статус')
 
     objects = WorkingIntervalQueryset.as_manager()
 
@@ -114,7 +142,7 @@ class WorkingInterval(models.Model):
         started_at = self.started_at.strftime(date_format)
         finished_at = (self.finished_at.strftime(date_format)
                        if self.finished_at is not None
-                       else 'текущее время')
+                       else 'настоящее время')
         return f'{started_at} - {finished_at}'
 
 

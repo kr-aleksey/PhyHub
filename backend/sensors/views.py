@@ -27,9 +27,9 @@ class SensorChartView(DetailView):
     @staticmethod
     def qs_to_timeline_data(intervals: Iterable[WorkingInterval]):
         data = (
-            (f"['{i.get_status_display()}', "
-             f"'{i.get_status_display()}', "
-             f"'{'#4285f4' if i.status == 'run' else '#db4437'}', "
+            (f"['{i.status.name}', "
+             f"'{i.status.name}', "
+             f"'{i.status.color}', "
              f"new Date({int(i.started_at.timestamp()) * 1000}), "
              f"new Date("
              f"{(int((i.finished_at or datetime.now()).timestamp()) * 1000)}"

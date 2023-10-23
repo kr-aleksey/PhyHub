@@ -1,6 +1,4 @@
 from django.utils import timezone
-
-from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -32,21 +30,21 @@ class SensorReadingListSerializer(serializers.ListSerializer):
 
         readings = []
         errors = []
-        for data in validated_data:
-            slug = data['sensor']
+        for reading_data in validated_data:
+            slug = reading_data['sensor']
             sensor: Sensor = sensors.get(slug)
             if sensor is None:
                 errors.append(f'Не найден сенсор {slug}')
             elif sensor.is_enabled:
                 interval = WorkingInterval.objects.check_interval(
                     sensor=sensor,
-                    status=sensor.get_working_status(data['value']),
+                    status=sensor.get_working_status(reading_data['value']),
                     on_date=measured_at
                 )
-                data['sensor'] = sensor
-                data['measured_at'] = measured_at
-                data['working_interval'] = interval
-                readings.append(SensorReading(**data))
+                reading_data['sensor'] = sensor
+                reading_data['measured_at'] = measured_at
+                reading_data['working_interval'] = interval
+                readings.append(SensorReading(**reading_data))
 
         if errors:
             raise ValidationError(errors)
@@ -55,3 +53,10 @@ class SensorReadingListSerializer(serializers.ListSerializer):
 
     def update(self, *args, **kwargs):
         super().update(*args, **kwargs)
+
+
+class WorkingIntervalCommentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = WorkingInterval
+        fields = ['comment']
