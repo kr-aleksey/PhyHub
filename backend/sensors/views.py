@@ -50,7 +50,11 @@ class SensorChartView(DetailView):
         data = super().get_context_data(**kwargs)
         interval_filter = self.filterset_class(
             self.request.GET,
-            queryset=self.object.working_intervals.order_by('started_at')
+            queryset=(self
+                      .object
+                      .working_intervals
+                      .prefetch_related('status')
+                      .order_by('started_at'))
         )
         working_intervals = interval_filter.qs
         sensor_readings = SensorReading.objects.filter(

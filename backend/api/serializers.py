@@ -57,6 +57,19 @@ class SensorReadingListSerializer(serializers.ListSerializer):
 
 class WorkingIntervalCommentSerializer(serializers.ModelSerializer):
 
+    sensor = serializers.SlugRelatedField(read_only=True, slug_field='name')
+    status = serializers.SlugRelatedField(read_only=True, slug_field='name')
+
     class Meta:
         model = WorkingInterval
-        fields = ['comment']
+        fields = ['id',
+                  'started_at',
+                  'finished_at',
+                  'sensor',
+                  'status',
+                  'comment']
+        read_only_fields = ['id',
+                            'started_at',
+                            'finished_at',
+                            'sensor',
+                            'status']
