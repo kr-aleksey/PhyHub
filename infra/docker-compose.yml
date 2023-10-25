@@ -8,7 +8,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8003:5432"
+      - "54321:5432"
 
   migration:
     image: kraleksey/phyhub:latest
@@ -22,7 +22,7 @@ services:
       - db
 
   web:
-    image: kraleksey/phyhub:latest
+    build: ../backend
     restart: unless-stopped
     volumes:
       - static_volume:/app/static/
@@ -36,7 +36,7 @@ services:
     image: nginx:1.25.1
     restart: unless-stopped
     ports:
-      - "8002:8000"
+      - "8000:8000"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - static_volume:/var/html/static/

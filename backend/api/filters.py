@@ -20,7 +20,9 @@ class WorkingIntervalFilter(FilterSet):
     commented = EmptyStringFilter('comment',
                                   exclude=True,
                                   label='С комментарием')
+    from_datetime = filters.DateTimeFilter('started_at', lookup_expr='gte')
+    to_datetime = filters.DateTimeFilter('finished_at', lookup_expr='lte')
 
     class Meta:
         model = WorkingInterval
-        fields = ['need_comment', 'commented']
+        fields = ['need_comment', 'commented', 'from_datetime', 'to_datetime']
