@@ -69,6 +69,7 @@ class SensorChartView(DetailView):
                   * 100.0)
         )
         data['filter'] = interval_filter
+        data['working_intervals'] = working_intervals
         data['chart_data'] = self.qs_to_chart_data(sensor_readings)
         data['timeline_data'] = self.qs_to_timeline_data(working_intervals)
         data['summary'] = speed

@@ -2,7 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from sensors.models import Sensor, SensorReading, WorkingInterval
+from sensors.models import Sensor, SensorReading, StatusReason, WorkingInterval
 
 
 class SensorReadingSerializer(serializers.ModelSerializer):
@@ -55,10 +55,27 @@ class SensorReadingListSerializer(serializers.ListSerializer):
         super().update(*args, **kwargs)
 
 
+class StatusReasonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StatusReason
+        fields = ['reason']
+
+
+class StatusWithReasonsSerializer(serializers.RelatedField):
+    def to_representation(self, status):
+        return {
+            'name': status.name,
+            'reasons': [r.reason for r in status.reasons.all()]
+        }
+
+    def to_internal_value(self, data):
+        super().to_internal_value(data)
+
+
 class WorkingIntervalCommentSerializer(serializers.ModelSerializer):
 
     sensor = serializers.SlugRelatedField(read_only=True, slug_field='name')
-    status = serializers.SlugRelatedField(read_only=True, slug_field='name')
+    status = StatusWithReasonsSerializer(read_only=True)
 
     class Meta:
         model = WorkingInterval

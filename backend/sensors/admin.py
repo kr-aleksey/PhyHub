@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Sensor, SensorStatus
+from .models import Sensor, SensorStatus, StatusReason
 
 
 @admin.register(Sensor)
@@ -23,11 +23,23 @@ class SensorStatusAdmin(admin.ModelAdmin):
                     'stop_value_range',
                     'color',
                     'need_comment')
-    search_fields = ('name', )
+    search_fields = ('name',)
     fields = ('sensor',
               'name',
               'start_value_range',
               'stop_value_range',
               'color',
               'need_comment')
+    save_as = True
+
+
+@admin.register(StatusReason)
+class StatusReasonAdmin(admin.ModelAdmin):
+    list_display = ('sensor_status',
+                    'reason',
+                    'priority')
+    search_fields = ('reason',)
+    fields = ('sensor_status',
+              'reason',
+              'priority')
     save_as = True

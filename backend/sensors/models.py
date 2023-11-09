@@ -46,10 +46,11 @@ class SensorStatus(models.Model):
     """
     Статус (состояние) сенсора.
     """
-    name = models.CharField('Название')
+    name = models.CharField('Название',
+                            max_length=50)
     start_value_range = models.FloatField('Значение с')
     stop_value_range = models.FloatField('Значение до')
-    need_comment = models.BooleanField('Необходим комментарий оператора')
+    need_comment = models.BooleanField('Необходим комментарий')
     color = models.CharField('Цвет',
                              max_length=7,
                              help_text='html цвет, например #4285f4')
@@ -63,7 +64,29 @@ class SensorStatus(models.Model):
         verbose_name_plural = 'Состояния сенсоров'
 
     def __str__(self):
-        return self.name
+        return f'{self.sensor.slug} - {self.name}'
+
+
+class StatusReason(models.Model):
+    """
+    Причина нахождения сенсора в статусе. Выбирается оператором процесса.
+    """
+    reason = models.CharField('Причина состояния',
+                              max_length=100)
+    priority = models.PositiveSmallIntegerField('Приоритет',
+                                                default=32767)
+    sensor_status = models.ForeignKey(SensorStatus,
+                                      related_name='reasons',
+                                      on_delete=models.CASCADE,
+                                      verbose_name='Состояние сенсора')
+
+    class Meta:
+        verbose_name = 'Причина состояния'
+        verbose_name_plural = 'Причины состояний'
+        ordering = ['priority', 'reason']
+
+    def __str__(self):
+        return self.reason
 
 
 class WorkingIntervalQueryset(models.QuerySet):
