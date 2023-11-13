@@ -133,6 +133,9 @@
                                     <h6 class="fw-semibold mb-0">По</h6>
                                 </th>
                                 <th class="border-bottom-0">
+                                    <h6 class="fw-semibold mb-0">Длительность</h6>
+                                </th>
+                                <th class="border-bottom-0">
                                     <h6 class="fw-semibold mb-0">Статус</h6>
                                 </th>
                                 <th class="border-bottom-0">
@@ -145,7 +148,8 @@
                                 <tr>
                                     <td class="border-bottom-0">{{ interval.started_at|date:'d.m.y H:i' }}</td>
                                     <td class="border-bottom-0">{{ interval.finished_at|date:'d.m.y H:i' }}</td>
-                                    <td class="border-bottom-0">{{ interval.status }}</td>
+                                    <td class="border-bottom-0">{{ interval.duration|duration }}</td>
+                                    <td class="border-bottom-0">{{ interval.status.name }}</td>
                                     <td class="border-bottom-0">{{ interval.comment }}</td>
                                 </tr>
                             {% endfor %}

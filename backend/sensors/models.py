@@ -214,6 +214,10 @@ class WorkingInterval(models.Model):
                        else 'настоящее время')
         return f'{started_at} - {finished_at}'
 
+    @property
+    def duration(self):
+        return (self.finished_at or timezone.now()) - self.started_at
+
 
 class SensorReadingQuerySet(models.QuerySet):
 
