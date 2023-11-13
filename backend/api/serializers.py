@@ -38,7 +38,7 @@ class SensorReadingListSerializer(serializers.ListSerializer):
             elif sensor.is_enabled:
                 interval = WorkingInterval.objects.check_interval(
                     sensor=sensor,
-                    status=sensor.get_working_status(reading_data['value']),
+                    value=reading_data['value'],
                     on_date=measured_at
                 )
                 reading_data['sensor'] = sensor

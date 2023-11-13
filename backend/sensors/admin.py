@@ -19,15 +19,19 @@ class SensorAdmin(admin.ModelAdmin):
 class SensorStatusAdmin(admin.ModelAdmin):
     list_display = ('sensor',
                     'name',
-                    'start_value_range',
-                    'stop_value_range',
+                    'value_from',
+                    'value_to',
+                    'duration_from',
+                    'duration_to',
                     'color',
                     'need_comment')
     search_fields = ('name',)
     fields = ('sensor',
               'name',
-              'start_value_range',
-              'stop_value_range',
+              'value_from',
+              'value_to',
+              'duration_from',
+              'duration_to',
               'color',
               'need_comment')
     save_as = True

@@ -1,8 +1,9 @@
 from datetime import datetime
+from datetime import timedelta
 from typing import Optional
 
 from django.db import models
-from django.db.models import OuterRef
+from django.db.models import OuterRef, Q
 from django.utils import timezone
 
 
@@ -36,10 +37,31 @@ class Sensor(models.Model):
         """
         return (self
                 .statuses
-                .filter(start_value_range__lte=value,
-                        stop_value_range__gt=value)
-                .order_by('start_value_range')
+                .filter(value_from__lte=value,
+                        value_to__gt=value)
+                .order_by('value_from')
                 .last())
+
+
+class SensorStatusQueryset(models.QuerySet):
+
+    def get_status(self,
+                   value: float,
+                   duration: timedelta,
+                   **kwargs):
+        """
+        Фильтрует queryset по kwargs, возвращает объект,
+        соответствующий параметрам value и duration.
+        """
+        return (self
+                .filter(**kwargs)
+                .filter(value_from__lte=value,
+                        value_to__gt=value)
+                .filter((Q(duration_to__gt=duration)
+                         | Q(duration_to__isnull=True)),
+                        duration_from__lte=duration)
+                .order_by('-value_to')
+                .first())
 
 
 class SensorStatus(models.Model):
@@ -48,8 +70,13 @@ class SensorStatus(models.Model):
     """
     name = models.CharField('Название',
                             max_length=50)
-    start_value_range = models.FloatField('Значение с')
-    stop_value_range = models.FloatField('Значение до')
+    value_from = models.FloatField('Значение с')
+    value_to = models.FloatField('Значение до')
+    duration_from = models.DurationField('Длительность с',
+                                         default=timedelta(0))
+    duration_to = models.DurationField('Длительность до',
+                                       blank=True,
+                                       null=True)
     need_comment = models.BooleanField('Необходим комментарий')
     color = models.CharField('Цвет',
                              max_length=7,
@@ -58,6 +85,8 @@ class SensorStatus(models.Model):
                                related_name='statuses',
                                on_delete=models.CASCADE,
                                verbose_name='Сенсор')
+
+    object = SensorStatusQueryset.as_manager()
 
     class Meta:
         verbose_name = 'Состояние сенсора'
@@ -96,42 +125,55 @@ class WorkingIntervalQueryset(models.QuerySet):
 
     def check_interval(self,
                        sensor: Sensor,
-                       status: Optional[SensorStatus],
+                       value: float,
                        on_date: datetime):
         """
-        Запрашивает из БД текущий рабочий интервал, сравнивает его статус
-        с текущим. Если статусы совпадают, возвращает интервал
-        без изменений, иначе создает новый интервал с текущим статусом и
-        возвращает его.
+        Возвращает новый WorkingInterval, если статус не изменился,
+        иначе новый.
         :param on_date: Момент времени измерения.
         :param sensor: Сенсор.
-        :param status: Текущий статус.
+        :param value: Новое значение.
         :return: Рабочий интервал.
         """
-
-        prev_interval: WorkingInterval = (self
-                                          .filter(sensor=sensor)
-                                          .order_by('started_at')
-                                          .last())
+        # получаем текущий интервал или создаем новый
+        interval = (self
+                    .filter(sensor=sensor,
+                            finished_at__isnull=True)
+                    .order_by('started_at')
+                    .last())
         # если предыдущих интервалов нет, создаем новый
-        if prev_interval is None:
+        if interval is None:
             return self.create(sensor=sensor,
-                               status=status,
-                               started_at=on_date)
-        # если статус не изменился или дата в прошлом, возвращаем предыдущий
-        if status is None:
-            if prev_interval.status is None:
-                return prev_interval
-        elif (prev_interval.status_id == status.pk
-              or prev_interval.started_at >= on_date):
-            return prev_interval
-        # иначе обновляем предыдущий и создаем новый
-        new_interval = self.create(sensor=sensor,
-                                   status=status,
-                                   started_at=on_date)
-        prev_interval.finished_at = on_date
-        prev_interval.save()
-        return new_interval
+                               started_at=on_date,
+                               last_reading_value=value)
+
+        # определяем предшествующий и текущий статус
+        duration = on_date - interval.started_at
+        prev_status = (sensor
+                       .statuses
+                       .get_status(value=interval.last_reading_value,
+                                   duration=duration))
+        cur_status = (sensor
+                      .statuses
+                      .get_status(value=value,
+                                  duration=duration))
+
+        # если статус не изменился
+        if (None in (prev_status, cur_status)
+                or prev_status.id == cur_status.id):
+            interval.last_reading_value = value
+            interval.save()
+            return interval
+
+        # если статус изменился, сохраняем интервал и создаем новый
+        interval.last_reading_value = value
+        interval.status = prev_status
+        interval.finished_at = on_date
+        interval.save()
+
+        return self.create(sensor=sensor,
+                           last_reading_value=value,
+                           started_at=on_date)
 
 
 class WorkingInterval(models.Model):
@@ -143,6 +185,7 @@ class WorkingInterval(models.Model):
     finished_at = models.DateTimeField('До',
                                        blank=True,
                                        null=True)
+    last_reading_value = models.FloatField('Крайнее измеренное значение')
     comment = models.CharField('Комментарий',
                                max_length=200,
                                blank=True)
