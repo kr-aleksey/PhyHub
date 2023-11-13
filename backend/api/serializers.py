@@ -65,7 +65,10 @@ class StatusWithReasonsSerializer(serializers.RelatedField):
     def to_representation(self, status):
         return {
             'name': status.name,
-            'reasons': [r.reason for r in status.reasons.all()]
+            'reasons': [
+                {'group': r.group, 'reason': r.reason}
+                for r in status.reasons.all()
+            ]
         }
 
     def to_internal_value(self, data):

@@ -37,9 +37,11 @@ class SensorStatusAdmin(admin.ModelAdmin):
 class StatusReasonAdmin(admin.ModelAdmin):
     list_display = ('sensor_status',
                     'reason',
+                    'group',
                     'priority')
     search_fields = ('reason',)
     fields = ('sensor_status',
+              'group',
               'reason',
               'priority')
     save_as = True

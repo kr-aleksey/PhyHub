@@ -73,6 +73,9 @@ class StatusReason(models.Model):
     """
     reason = models.CharField('Причина состояния',
                               max_length=100)
+    group = models.CharField('Группа',
+                             max_length=50,
+                             blank=True)
     priority = models.PositiveSmallIntegerField('Приоритет',
                                                 default=32767)
     sensor_status = models.ForeignKey(SensorStatus,
@@ -83,7 +86,7 @@ class StatusReason(models.Model):
     class Meta:
         verbose_name = 'Причина состояния'
         verbose_name_plural = 'Причины состояний'
-        ordering = ['priority', 'reason']
+        ordering = ['group', 'priority', 'reason']
 
     def __str__(self):
         return self.reason
