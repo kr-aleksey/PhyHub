@@ -26,6 +26,7 @@ class SensorStatusAdmin(admin.ModelAdmin):
                     'color',
                     'need_comment')
     search_fields = ('name',)
+    list_filter = ('sensor',)
     fields = ('sensor',
               'name',
               'value_from',
@@ -44,6 +45,7 @@ class StatusReasonAdmin(admin.ModelAdmin):
                     'group',
                     'priority')
     search_fields = ('reason',)
+    list_filter = ('sensor_status',)
     fields = ('sensor_status',
               'group',
               'reason',

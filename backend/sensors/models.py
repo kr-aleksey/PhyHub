@@ -91,6 +91,7 @@ class SensorStatus(models.Model):
     class Meta:
         verbose_name = 'Состояние сенсора'
         verbose_name_plural = 'Состояния сенсоров'
+        ordering = ['name']
 
     def __str__(self):
         return f'{self.sensor.slug} - {self.name}'
